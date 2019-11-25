@@ -1,0 +1,32 @@
+# profile values is prod,dev,test
+spring:
+  profiles:
+    active: dev
+  main:
+    allow-bean-definition-overriding: true
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/zzz
+    username: root
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+logging:
+  path: logs
+  file: app.log
+
+server:
+  port: 8888
+
+# spark config
+app:
+  conf:
+    spark:
+      host: 192.168.1.31
+      port: 2222
+    job:
+      hdfs:
+        cron: * * * * * ?

@@ -1,0 +1,7 @@
+# dev config
+app:
+  conf:
+    spark:
+      host: localhost
+server:
+  port: 3333
