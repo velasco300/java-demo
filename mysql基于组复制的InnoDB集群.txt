@@ -1,0 +1,114 @@
+修改主机名和配置hosts文件
+hostnamectl set-hostname server113
+vim /etc/hosts 添加
+192.168.160.112 server112
+192.168.160.113 server113
+192.168.160.114 server114
+192.168.160.115 server115
+
+关闭防火墙和selinux
+查防火墙状态
+systemctl status firewalld.service
+停止防火墙
+systemctl stop firewalld.service
+systemctl disable firewalld.service
+
+查看selinux状态
+getenforce
+修改
+vim /etc/selinux/config
+SELINUX=disabled
+
+sysctl.conf 优化
+cat>>/etc/sysctl.conf <<EOF
+fs.aio-max-nr = 1048576
+fs.file-max = 681574400
+kernel.shmmax = 137438953472 
+kernel.shmmni = 4096
+kernel.sem = 250 32000 100 200
+net.ipv4.ip_local_port_range = 9000 65000
+net.core.rmem_default = 262144
+net.core.rmem_max = 4194304
+net.core.wmem_default = 262144
+net.core.wmem_max = 1048586
+EOF
+
+limit 优化：
+cat>>/etc/security/limits.conf <<EOF
+mysql soft nproc 65536
+mysql hard nproc 65536
+mysql soft nofile 65536
+mysql hard nofile 65536
+EOF
+
+集群规划
+server112 mysql-shell和mysql-router
+server113 mysql和mysql-shell
+server114 mysql和mysql-shell
+server115 mysql和mysql-shell
+
+安装MySQL
+yum install mysql-community-server
+yum install mysql-shell
+yum install mysql-router
+
+在server113上（root登录服务器）
+进入mysql-shell
+# shell.connect('root@localhost:3306')
+# dba.configureLocalInstance()
+# 提示选项选2创建一个管理员用户
+dba.checkInstanceConfiguration('mall@server113:3306')
+dba.configureLocalInstance('mall@server113:3306')
+重启mysql
+systemctl restart mysqld.service
+在server112上
+进入mysql-shell
+shell.connect('mall@server113:3306')
+var cluster = dba.createCluster('prodCluster',{multiPrimary: true})
+cluster.status()
+在其他服务器上参考server113的步骤配置好mysql(新建的用户名和密码要一致)，然后在server112上把他们加入集群
+cluster.addInstance('mall@server114:3306')
+cluster.addInstance('mall@server115:3306')
+新建访问用户
+create user 'bbbbbb'@'%' identified by 'Bb#12345';
+grant all on *.* to 'bbbbbb'@'%' with grant option;
+flush privileges;
+在server112上配置mysqlrouter
+mysqlrouter --bootstrap bbbbbb@server113:3306 -d myrouter --name=myrouter
+myrouter/start.sh
+mysql -h server112 -P 6446 -u bbbbbb -p
+
+删除集群
+登录mysql-shell
+var cluster = dba.getCluster('prodCluster')
+cluster.dissolve({force: true})
+
+
+
+
+
+
+
+
+
+
+
+
+
+登录mysql客户端
+stop group_replication;
+reset master;删除所有的binglog日志文件，并将日志索引文件清空，重新开始所有新的日志文件。用于第一次进行搭建主从库时，进行主库binlog初始化工作
+reset slave;删除SLAVE数据库的relaylog日志文件，并重新启用新的relaylog文件,使slave 忘记主从复制关系的位置信息
+
+[======
+Show plugins;
+show global variables like 'group_replication%';
+查看是否开启了binlog日志文件# show variables like 'log_bin';
+查看有哪些binlog# show binary logs;
+查看log_bin中的内容# show binlog events in 'mysql-bin.000001'\G;
+
+cluster.rejoinInstance('mall@server115:3306')
+cluster.removeInstance('mall@server115:3306',{force: true})
+======]
+
+
