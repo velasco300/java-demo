@@ -16,6 +16,8 @@ public class User implements Serializable {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
+	@NotNull(message = "用户名不能为空")
+	@Size(min = 3, max = 6, message = "长度为3到6")
 	private String userName;
 
 	private Integer age;

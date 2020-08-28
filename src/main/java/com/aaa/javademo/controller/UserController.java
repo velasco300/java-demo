@@ -29,7 +29,7 @@ public class UserController extends BaseController {
 	}
 
 	@RequestMapping(value = "add", method = RequestMethod.GET)
-	public Result<User> add(User user) {
+	public Result<User> add(@Valid User user) {
 		Result<User> rs = new Result<User>();
 		userService.add(user);
 		rs.setData(user);
